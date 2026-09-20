@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23161616'/%3E%3Ccircle cx='11' cy='10' r='4.5' fill='%23ffffff' opacity='0.85'/%3E%3C/svg%3E">
+<title>围棋 · GO — 人机对弈</title>
+<style>
+  :root{
+    --ink:#4a3620;
+    --ink-soft:#7a5f3d;
+    --gold:#9c7a3f;
+    --paper1:#f4ead6;
+    --paper2:#e9d9bb;
+    --panel:#f9f1e0;
+    --wood-deep:#6d4e2c;
+    --wood-mid:#8a6a42;
+    --line:#bda37c;
+    --danger:#a5482f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(255,255,255,.55), transparent 55%),
+      radial-gradient(ellipse at 85% 100%, rgba(160,120,70,.18), transparent 60%),
+      repeating-linear-gradient(93deg, rgba(120,90,50,.022) 0 3px, transparent 3px 9px),
+      linear-gradient(160deg, var(--paper1), var(--paper2));
+    background-attachment:fixed;
+    min-height:100vh;
+    display:flex;flex-direction:column;
+  }
+  .serif{font-family:"Noto Serif SC","Songti SC","STSong",SimSun,serif}
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;flex-wrap:wrap;gap:8px;
+    background:linear-gradient(180deg, rgba(109,78,44,.92), rgba(93,66,36,.94));
+    box-shadow:0 2px 14px rgba(60,40,15,.35), inset 0 1px 0 rgba(255,235,200,.18);
+    position:sticky;top:0;z-index:30;
+  }
+  .brand{display:flex;align-items:baseline;gap:12px;color:#f6e9d2}
+  .brand-zh{font-size:26px;letter-spacing:6px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+  .brand-en{font-size:15px;letter-spacing:4px;color:#d9b98a;font-family:Georgia,serif}
+  .head-right{display:flex;align-items:center;gap:10px}
+  .rule-badge{
+    font-size:12px;color:#f1dfc0;border:1px solid rgba(240,220,180,.4);border-radius:20px;
+    padding:3px 12px;background:rgba(255,240,210,.08);letter-spacing:1px;
+  }
+  button{
+    font-family:inherit;cursor:pointer;border-radius:8px;transition:filter .15s,transform .05s;
+  }
+  button:active{transform:translateY(1px)}
+  .btn-lang{
+    background:rgba(255,245,225,.14);color:#f6e9d2;border:1px solid rgba(255,240,210,.35);
+    padding:5px 14px;font-size:13px;letter-spacing:1px;
+  }
+  .btn-lang:hover{filter:brightness(1.15)}
+
+  /* ---------- layout ---------- */
+  main{
+    flex:1;width:100%;max-width:1120px;margin:0 auto;padding:22px 16px 10px;
+    display:flex;gap:22px;align-items:flex-start;justify-content:center;flex-wrap:wrap;
+  }
+
+  /* ---------- board ---------- */
+  .board-column{display:flex;flex-direction:column;align-items:center;gap:10px}
+  #boardWrap{
+    position:relative;
+    width:min(92vw, calc(100vh - 260px), 660px);
+    aspect-ratio:1/1;
+    padding:12px; /* wooden thickness */
+    background:linear-gradient(145deg,#7c5a34,#5e4224 60%,#8a653c);
+    border-radius:10px;
+    box-shadow:0 14px 34px rgba(70,45,15,.5), inset 0 1px 0 rgba(255,225,170,.4), inset 0 -3px 8px rgba(0,0,0,.5);
+  }
+  #boardInner{
+    position:relative;width:100%;height:100%;border-radius:6px;overflow:hidden;
+    background:linear-gradient(150deg,#e9c084,#d6a45f);
+    box-shadow:inset 0 2px 8px rgba(90,55,15,.5), inset 0 0 0 1px rgba(90,55,15,.35), 0 1px 0 rgba(255,240,210,.5);
+  }
+  #boardInner canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #cvFx{cursor:pointer}
+  #cvFx.nointer{cursor:default}
+  .board-note{
+    font-size:13px;color:var(--ink-soft);letter-spacing:1px;
+    background:rgba(249,241,224,.75);border:1px solid var(--line);border-radius:20px;
+    padding:4px 16px;box-shadow:0 1px 4px rgba(90,60,20,.12);
+  }
+  .board-note b{color:var(--wood-deep)}
+
+  /* ---------- side cards ---------- */
+  .side{width:min(94vw,330px);display:flex;flex-direction:column;gap:14px}
+  .card{
+    background:linear-gradient(180deg, rgba(250,243,228,.92), rgba(240,227,201,.92));
+    border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 6px 18px rgba(90,60,25,.14), inset 0 1px 0 rgba(255,255,255,.6);
+    padding:14px 16px;
+  }
+  .card h3{
+    font-size:13px;letter-spacing:3px;color:var(--wood-deep);
+    border-bottom:1px solid rgba(150,115,65,.35);padding-bottom:7px;margin-bottom:10px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .info-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:3px 0}
+  .info-row .k{color:var(--ink-soft)}
+  .stone-mini{display:inline-block;width:15px;height:15px;border-radius:50%;vertical-align:-2px;margin-right:6px}
+  .stone-mini.b{background:radial-gradient(circle at 35% 30%,#666,#161616 70%);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+  .stone-mini.w{background:radial-gradient(circle at 35% 30%,#fff,#d9d2c2 75%);box-shadow:0 1px 2px rgba(60,40,10,.4), inset 0 0 0 1px rgba(140,120,90,.5)}
+  .pill{border-radius:20px;padding:2px 12px;font-size:12.5px;letter-spacing:1px;color:#fff}
+  .pill.turn-you{background:#6d8f4a}
+  .pill.turn-ai{background:#b0602f}
+  .pill.turn-pass{background:#8a8a8a}
+
+  label.fld{display:block;font-size:12.5px;color:var(--ink-soft);margin:8px 0 3px;letter-spacing:1px}
+  select{
+    width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:#fdf8ec;
+    border:1px solid #c8ab7e;border-radius:7px;padding:7px 8px;outline:none;cursor:pointer;
+  }
+  select:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(156,122,63,.25)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn-new{
+    width:100%;margin-top:12px;padding:10px;font-size:15px;letter-spacing:4px;color:#fdf3df;
+    background:linear-gradient(180deg,#8a6538,#6d4e2c);border:1px solid #573d20;border-radius:8px;
+    box-shadow:0 3px 8px rgba(70,45,15,.35), inset 0 1px 0 rgba(255,230,180,.35);
+  }
+  .btn-new:hover{filter:brightness(1.12)}
+  .actions{display:flex;gap:8px}
+  .actions button{
+    flex:1;padding:9px 4px;font-size:14px;letter-spacing:2px;
+    background:#efe0c2;color:#5d4426;border:1px solid #c3a376;border-radius:8px;
+  }
+  .actions button:hover{background:#e6d2ac}
+  .actions button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .actions button.btn-primary{background:#a56a35;color:#fdf3e0;border-color:#7d4e24}
+  .actions button.btn-primary:hover{background:#b57a42}
+  .actions button.btn-danger{background:#c9a9a0;color:#6d2f20;border-color:#a97a6e}
+  .actions button.btn-danger:hover{background:#bd9589}
+  .actions.cleanup-mode button{display:none}
+  .actions.cleanup-mode button.cleanup-show{display:block}
+
+  /* ---------- modal ---------- */
+  #modalWrap{
+    position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+    background:rgba(55,35,12,.5);backdrop-filter:blur(2px);
+  }
+  #modalWrap.show{display:flex}
+  .modal{
+    width:min(92vw,430px);max-height:84vh;overflow:auto;
+    background:linear-gradient(180deg,#faf3e2,#efe0c0);border:1px solid #c3a376;border-radius:14px;
+    box-shadow:0 24px 60px rgba(40,20,0,.5), inset 0 1px 0 rgba(255,255,255,.7);
+    padding:22px 24px;
+  }
+  .modal h2{font-size:22px;letter-spacing:5px;text-align:center;color:var(--wood-deep);margin-bottom:4px}
+  .modal .sub{text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:14px}
+  .modal .winner-line{text-align:center;font-size:15px;margin:8px 0 4px}
+  .modal .diff-line{text-align:center;font-size:17px;font-weight:700;color:var(--danger);margin-bottom:12px}
+  .score-tbl{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 10px}
+  .score-tbl td{padding:4px 6px;border-bottom:1px dashed rgba(150,115,65,.35)}
+  .score-tbl td:first-child{color:var(--ink-soft);width:58%}
+  .score-tbl td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+  .score-tbl tr.total td{border-bottom:none;font-weight:700;color:var(--wood-deep);border-top:1px solid rgba(150,115,65,.5)}
+  .modal .btn-row{display:flex;gap:10px;margin-top:14px}
+  .modal .btn-row button{flex:1;padding:9px;font-size:14px;letter-spacing:2px;border-radius:8px}
+  .btn-ok{background:linear-gradient(180deg,#8a6538,#6d4e2c);color:#fdf3e0;border:1px solid #573d20}
+  .btn-ghost{background:#efe0c2;color:#5d4426;border:1px solid #c3a376}
+  .modal p.hint{font-size:12.5px;color:var(--ink-soft);margin:10px 0 0;line-height:1.7}
+
+  footer{
+    text-align:center;font-size:11.5px;color:#93794f;padding:12px 16px 18px;line-height:1.8;
+  }
+  @media (max-width:860px){
+    main{flex-direction:column;align-items:center}
+    .side{width:min(94vw,660px)}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-en serif">GO</span>
+    <span class="brand-zh serif" data-i18n="brandTitle">围棋 · 人机对弈</span>
+  </div>
+  <div class="head-right">
+    <span class="rule-badge" id="ruleBadge"></span>
+    <button class="btn-lang" id="langBtn">EN</button>
+  </div>
+</header>
+
+<main>
+  <div class="board-column">
+    <div id="boardWrap">
+      <div id="boardInner">
+        <canvas id="cvBase"></canvas>
+        <canvas id="cvStones"></canvas>
+        <canvas id="cvFx"></canvas>
+      </div>
+    </div>
+    <div class="board-note" id="boardNote"></div>
+  </div>
+
+  <aside class="side">
+    <div class="card">
+      <h3><span data-i18n="match">对局</span><span id="matchTag"></span></h3>
+      <div class="info-row"><span class="k" data-i18n="turn">回合</span><span id="turnVal"></span></div>
+      <div class="info-row"><span class="k" data-i18n="caps">吃子</span><span id="capsVal"></span></div>
+      <div class="info-row"><span class="k" data-i18n="komiLbl">贴目</span><span id="komiVal"></span></div>
+      <div class="info-row"><span class="k" data-i18n="movesLbl">手数</span><span id="moveVal"></span></div>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="setup">对局设置</h3>
+      <div class="grid2">
+        <div>
+          <label class="fld" data-i18n="fldRule" for="selRule">计分规则</label>
+          <select id="selRule"></select>
+        </div>
+        <div>
+          <label class="fld" data-i18n="fldSize" for="selSize">棋盘路数</label>
+          <select id="selSize"></select>
+        </div>
+        <div>
+          <label class="fld" data-i18n="fldColor" for="selColor">执子</label>
+          <select id="selColor"></select>
+        </div>
+        <div>
+          <label class="fld" data-i18n="fldDiff" for="selDiff">AI 难度</label>
+          <select id="selDiff"></select>
+        </div>
+      </div>
+      <button class="btn-new" id="btnNew"><span data-i18n="newGame">新开一局</span></button>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="ops">操作</h3>
+      <div class="actions" id="actionsPlay">
+        <button id="btnUndo" data-i18n="undo">悔棋</button>
+        <button id="btnPass" data-i18n="pass">让一手</button>
+        <button class="btn-primary" id="btnFinish" data-i18n="finish">结束计分</button>
+        <button class="btn-danger" id="btnResign" data-i18n="resign">认输</button>
+      </div>
+      <div class="actions cleanup-mode" id="actionsClean">
+        <button class="btn-primary cleanup-show" id="btnScore" data-i18n="confirmScore">确认计分</button>
+        <button class="cleanup-show" id="btnBackGame" data-i18n="backGame">返回对局</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span id="footNote"></span>
+</footer>
+
+<div id="modalWrap">
+  <div class="modal" id="modalBox">
+    <h2 id="mTitle"></h2>
+    <div class="sub" id="mSub"></div>
+    <div id="mBody"></div>
+    <div class="btn-row">
+      <button class="btn-ok" id="mOk"></button>
+      <button class="btn-ghost" id="mGhost"></button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script src="ai.js"></script>
+<script src="go.js"></script>
+</body>
+</html>
