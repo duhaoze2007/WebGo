@@ -3,7 +3,7 @@
 const fs = require('fs');
 const vm = require('vm');
 global.window = global;   // 让 engine.js / ai.js 导出到全局
-const dir = '/home/ubuntu/go-site/';
+const dir = __dirname + '/';
 vm.runInThisContext(fs.readFileSync(dir+'engine.js','utf8'), {filename:'engine.js'});
 vm.runInThisContext(fs.readFileSync(dir+'ai.js','utf8'), {filename:'ai.js'});
 const { GoEngine, computeScore } = global;
